@@ -6,8 +6,10 @@ WHERE trim(a1.ArticuloID) = '3241-5351A'
 MATCH (a1)<-[:COMPRA]-(ed1:Entrada_Detalle)-[:DETALLA]->(e:Entrada)
 MATCH (a2)<-[:COMPRA]-(ed2:Entrada_Detalle)-[:DETALLA]->(e)
 
-WITH DISTINCT e.Folio AS Folio
+WITH DISTINCT e.Folio AS Folio, a1, a2
 RETURN
+  a1.ArticuloID AS Articulo1,
+  a2.ArticuloID AS Articulo2,
   collect(Folio) AS Folios_en_comun,
   count(Folio)   AS NumFolios;
 
@@ -19,8 +21,10 @@ WHERE trim(a1.ArticuloID) = 'SFSD99R'
 MATCH (a1)<-[:COMPRA]-(ed1:Entrada_Detalle)-[:DETALLA]->(e:Entrada)
 MATCH (a2)<-[:COMPRA]-(ed2:Entrada_Detalle)-[:DETALLA]->(e)
 
-WITH DISTINCT e.Folio AS Folio
+WITH DISTINCT e.Folio AS Folio, a1, a2
 RETURN
+  a1.ArticuloID AS Articulo1,
+  a2.ArticuloID AS Articulo2,
   collect(Folio) AS Folios_en_comun,
   count(Folio)   AS NumFolios;
 
@@ -28,14 +32,14 @@ RETURN
 MATCH (a1:Articulo), (a2:Articulo), (a3:Articulo)
 WHERE trim(a1.ArticuloID) = 'BFNPU94L'
   AND trim(a2.ArticuloID) = 'SNSE01L'
-  AND trim(a3.ArticuloID) = 'AQUI_VA_LA_TERCERA_CLAVE'
 
 MATCH (a1)<-[:COMPRA]-(ed1:Entrada_Detalle)-[:DETALLA]->(e:Entrada)
 MATCH (a2)<-[:COMPRA]-(ed2:Entrada_Detalle)-[:DETALLA]->(e)
-MATCH (a3)<-[:COMPRA]-(ed3:Entrada_Detalle)-[:DETALLA]->(e)
 
-WITH DISTINCT e.Folio AS Folio
+WITH DISTINCT e.Folio AS Folio, a1, a2
 RETURN
+  a1.ArticuloID AS Articulo1,
+  a2.ArticuloID AS Articulo2,
   collect(Folio) AS Folios_en_comun,
   count(Folio)   AS NumFolios;
 
@@ -45,17 +49,15 @@ WHERE trim(a1.ArticuloID) = '3176-5388'
 
 MATCH (a1)<-[:COMPRA]-(ed1:Entrada_Detalle)-[:DETALLA]->(e:Entrada)
 MATCH (e)<-[:DETALLA]-(ed2:Entrada_Detalle)-[:COMPRA]->(a2:Articulo)
-WHERE a2 <> a1   // para no recomendarse a sí mismo
+WHERE a2 <> a1
 
 WITH a1, a2, count(DISTINCT e) AS Frecuencia
 ORDER BY Frecuencia DESC
 
-WITH a1,
-     collect({ArticuloRecomendado:a2.ArticuloID, Frecuencia:Frecuencia}) AS Recs
 RETURN
   a1.ArticuloID AS Articulo_Original,
-  size(Recs)    AS NumArticulosRecomendados,
-  Recs          AS DetalleRecomendaciones;
+  a2.ArticuloID AS Articulo_Recomendado,
+  Frecuencia    AS Num_Articulos_Recomendados;
 
 // 3.1.5
 MATCH (a1:Articulo)
@@ -64,18 +66,18 @@ MATCH (a1)-[:CLASE]->(clase:Articulo_Clase)
 
 MATCH (a1)<-[:COMPRA]-(ed1:Entrada_Detalle)-[:DETALLA]->(e:Entrada)
 MATCH (e)<-[:DETALLA]-(ed2:Entrada_Detalle)-[:COMPRA]->(a2:Articulo)
-MATCH (a2)-[:CLASE]->(clase)    // misma clase
+MATCH (a2)-[:CLASE]->(clase)
 WHERE a2 <> a1
 
 WITH a1, a2, count(DISTINCT e) AS Frecuencia
 ORDER BY Frecuencia DESC
 
-WITH a1,
-     collect({ArticuloRecomendado:a2.ArticuloID, Frecuencia:Frecuencia}) AS Recs
 RETURN
   a1.ArticuloID AS Articulo_Original,
-  size(Recs)    AS NumRecomendadosMismaClase,
-  Recs          AS DetalleRecomendacionesMismaClase;
+  a1.Articulo_Clase AS Clase_Articulo_Original,
+  a2.ArticuloID AS Articulo_Recomendado,
+  a2.Articulo_Clase AS Clase_Articulo_Recomendado,
+  Frecuencia
 
 // 3.1.6
 MATCH (a1:Articulo)
@@ -84,18 +86,18 @@ MATCH (a1)-[:TIPO]->(tipo:Articulo_Tipo)
 
 MATCH (a1)<-[:COMPRA]-(ed1:Entrada_Detalle)-[:DETALLA]->(e:Entrada)
 MATCH (e)<-[:DETALLA]-(ed2:Entrada_Detalle)-[:COMPRA]->(a2:Articulo)
-MATCH (a2)-[:TIPO]->(tipo)      // mismo tipo
+MATCH (a2)-[:TIPO]->(tipo)
 WHERE a2 <> a1
 
 WITH a1, a2, count(DISTINCT e) AS Frecuencia
 ORDER BY Frecuencia DESC
 
-WITH a1,
-     collect({ArticuloRecomendado:a2.ArticuloID, Frecuencia:Frecuencia}) AS Recs
 RETURN
   a1.ArticuloID AS Articulo_Original,
-  size(Recs)    AS NumRecomendadosMismoTipo,
-  Recs          AS DetalleRecomendacionesMismoTipo;
+  a1.Articulo_Tipo AS Tipo_Articulo_Original,
+  a2.ArticuloID AS Articulo_Recomendado,
+  a2.Articulo_Tipo AS Tipo_Articulo_Recomendado, 
+  Frecuencia
 
 // 3.1.7
 MATCH (a1:Articulo)
@@ -104,15 +106,15 @@ MATCH (a1)-[:GRUPO]->(grupo:Articulo_Grupo)
 
 MATCH (a1)<-[:COMPRA]-(ed1:Entrada_Detalle)-[:DETALLA]->(e:Entrada)
 MATCH (e)<-[:DETALLA]-(ed2:Entrada_Detalle)-[:COMPRA]->(a2:Articulo)
-MATCH (a2)-[:GRUPO]->(grupo)    // mismo grupo
+MATCH (a2)-[:GRUPO]->(grupo)
 WHERE a2 <> a1
 
 WITH a1, a2, count(DISTINCT e) AS Frecuencia
 ORDER BY Frecuencia DESC
 
-WITH a1,
-     collect({ArticuloRecomendado:a2.ArticuloID, Frecuencia:Frecuencia}) AS Recs
 RETURN
   a1.ArticuloID AS Articulo_Original,
-  size(Recs)    AS NumRecomendadosMismoGrupo,
-  Recs          AS DetalleRecomendacionesMismoGrupo;
+  a1.Articulo_Grupo AS Grupo_Articulo_Original,
+  a2.ArticuloID AS Articulo_Recomendado,
+  a2.Articulo_Grupo AS Grupo_Articulo_Recomendado,
+  Frecuencia
